@@ -12,6 +12,7 @@ CORS(app)
 
 
 
+
 @app.route('/detect-teeth', methods=['POST'])
 def detect_teeth():
     """
@@ -134,8 +135,8 @@ def apply_brackets():
         # THIS LOOP APPLIES BRACKET TO EACH INDIVIDUAL TOOTH
         for tooth in teeth_data:
             # Calculate bracket size (proportional to tooth size)
-            bracket_width = int(tooth['width'] * 0.6)  # 60% of tooth width
-            bracket_height = int(tooth['height'] * 0.6)  # 60% of tooth height
+            bracket_width = int(tooth['width'] * 1.1)  # 90% of tooth width
+            bracket_height = int(tooth['height'] * 1.1)  # 90% of tooth height
             
             # Resize bracket to fit this specific tooth
             resized_bracket = bracket_img.resize(
