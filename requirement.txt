@@ -3,3 +3,5 @@ opencv-python-headless
 python-dotenv
 matplotlib
 flask
+flask-cors
+gunicorn
