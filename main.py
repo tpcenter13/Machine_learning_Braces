@@ -1,3 +1,5 @@
+import os
+from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
@@ -7,10 +9,13 @@ import base64
 from PIL import Image, ImageDraw
 import io
 
+load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
-
+API_KEY = os.getenv("API_KEY")
+MODEL_ID = os.getenv("MODEL_ID")
+MODEL_VERSION = os.getenv("MODEL_VERSION")
 
 
 @app.route('/detect-teeth', methods=['POST'])
@@ -91,12 +96,13 @@ def detect_teeth():
 def apply_brackets():
     """
     Endpoint 2: Applies bracket overlays to detected teeth
-    This is where metal.png or ceramic.png gets overlaid on EACH tooth
+    Now supports bracket_color parameter for metal brackets
     """
     try:
         data = request.json
         image_base64 = data.get('image')
         bracket_type = data.get('bracket_type')  # 'metal' or 'ceramic'
+        bracket_color = data.get('bracket_color')  # 'green', 'white', 'brown' (for metal only)
         teeth_data = data.get('teeth')  # List of detected teeth positions
         
         if not all([image_base64, bracket_type, teeth_data]):
@@ -114,16 +120,29 @@ def apply_brackets():
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         pil_image = Image.fromarray(image_rgb)
         
-        # Load bracket image based on type (FROM YOUR ASSETS FOLDER)
+        # Load bracket image based on type and color
         try:
             if bracket_type == 'metal':
-                bracket_img = Image.open('assets/metal.png').convert('RGBA')
+                # Map color names to file names
+                color_map = {
+                    'green': 'greenbraces.png',
+                    'white': 'whitebraces.png',
+                    'brown': 'metal.png'
+                }
+                
+                if bracket_color not in color_map:
+                    return jsonify({'error': 'Invalid bracket color for metal'}), 400
+                
+                bracket_filename = color_map[bracket_color]
+                bracket_img = Image.open(f'assets/{bracket_filename}').convert('RGBA')
+                
             elif bracket_type == 'ceramic':
                 bracket_img = Image.open('assets/ceramic.png').convert('RGBA')
             else:
                 return jsonify({'error': 'Invalid bracket type'}), 400
-        except FileNotFoundError:
-            return jsonify({'error': f'Bracket image not found: assets/{bracket_type}.png'}), 500
+                
+        except FileNotFoundError as e:
+            return jsonify({'error': f'Bracket image not found: {str(e)}'}), 500
         
         # Convert main image to RGBA for transparency support
         if pil_image.mode != 'RGBA':
@@ -132,11 +151,11 @@ def apply_brackets():
         # Create overlay layer
         overlay = Image.new('RGBA', pil_image.size, (0, 0, 0, 0))
         
-        # THIS LOOP APPLIES BRACKET TO EACH INDIVIDUAL TOOTH
+        # Apply bracket to each individual tooth
         for tooth in teeth_data:
             # Calculate bracket size (proportional to tooth size)
-            bracket_width = int(tooth['width'] * 1.1)  # 90% of tooth width
-            bracket_height = int(tooth['height'] * 1.1)  # 90% of tooth height
+            bracket_width = int(tooth['width'] * 1.1)
+            bracket_height = int(tooth['height'] * 1.1)
             
             # Resize bracket to fit this specific tooth
             resized_bracket = bracket_img.resize(
@@ -166,7 +185,8 @@ def apply_brackets():
             'success': True,
             'processed_image': img_str,
             'teeth_count': len(teeth_data),
-            'bracket_type': bracket_type
+            'bracket_type': bracket_type,
+            'bracket_color': bracket_color if bracket_type == 'metal' else None
         })
         
     except Exception as e:
