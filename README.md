@@ -111,7 +111,7 @@ E --> F[Return Processed Image as Base64]
 
 🧾 Installation
 1️⃣ Clone the Repository
-git clone https://github.com/yourusername/Machine_learning_Braces.git
+git clone https://github.com/tpcenter13/Machine_learning_Braces.git
 cd Machine_learning_Braces
 
 2️⃣ Install Dependencies
